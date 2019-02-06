@@ -24,7 +24,7 @@ import re
 # you may use urllib to encode data appropriately
 import urllib.parse
 from urllib.parse import urlparse
-
+from urllib.parse import urlencode
 
 def help():
     print("httpclient.py [GET/POST] [URL]\n")
@@ -38,35 +38,33 @@ class HTTPClient(object):
     #def get_host_port(self,url):
 
 
-    def sendRequest(self, command, path, hostname):
+    def formRequest(self, command, path, hostname):
 
 
         if (command == "GET"):
             req_type = "GET " + path
 
 
+        if (command == "POST"):
+            req_type = "POST " + path
 
 
 
 
+        request = req_type + " HTTP/1.1" + "\r\n" + \
+        "Host:" + hostname + "\r\n" + \
+        "Accept: */*\r\n"
 
-        request = req_type + " HTTP/1.1 " + "\r\n" + \
-        "Host: " + hostname + "\r\n" + \
-        "Accept: */*\r\n" + \
-        "Connection: close\r\n\r\n"
 
-        print(request)
+
 
         #"Date: " + datetime.datetime.today().strftime("%a, %d %B %Y %X %Z") + "\r\n" \
         #"Content-type: text/" + mime_type + "\r\n" + \
         #"Content-length: " + str(len(contents)) + "\r\n\r\n" + \
         #contents + "\r\n"
 
-        self.socket.send(request.encode('utf-8'))
 
-        recieved = self.recvall(self.socket)
-
-        return recieved
+        return request
 
         #self.request.sendall(str.encode(response))
 
@@ -74,12 +72,25 @@ class HTTPClient(object):
     def connect(self, host, port):
 
 
+
+
         if port is None:
             port = 80
 
-
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((host, port))
+
+        try:
+            self.socket.connect((host, port))
+
+        except socket.error as msg:
+            self.socket.close()
+            self.socket = None
+
+
+        if self.socket == None:
+            sys.exit(1)
+
+
 
 
         return None
@@ -88,20 +99,25 @@ class HTTPClient(object):
 
         code = (int)((data.split(" "))[1])
 
-        print(code)
+        #print(code)
 
         return code
 
     def get_headers(self,data):
-        return None
+
+        headers = data.split("\r\n\r\n")[0]
+
+
+        return headers
 
     def get_body(self, data):
 
+
         body = data.split("\r\n\r\n")[1]
 
-        print(body)
+        #print(body)
 
-        return None
+        return body
 
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -119,11 +135,11 @@ class HTTPClient(object):
                 buffer.extend(part)
             else:
                 done = not part
-        return buffer.decode('ISO-8859-1')
+        return buffer.decode('utf-8')
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        #code = 500
+        #body = ""
 
 
         # need http
@@ -131,24 +147,82 @@ class HTTPClient(object):
         hostname, port, path = self.parse(url)
 
 
-        print(hostname, port, path)
+
 
         self.connect(hostname, port)
 
-        recieved_data = self.sendRequest("GET", path, hostname )
+        request = self.formRequest("GET", path, hostname )
+        request += "Connection: close\r\n\r\n"
 
-        #print(recieved_data)
+
+        #self.socket.send(request.encode('utf-8'))
+
+        self.sendall(request)
+
+
+
+        recieved_data = self.recvall(self.socket)
+        self.socket.close()
+
+        #recieved_data = recieved_data.decode(utf-8)
+
+
+        print(recieved_data)
 
         code = self.get_code(recieved_data)
         body = self.get_body(recieved_data)
 
+        #headers = self.get_headers(recieved_data)
 
 
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
-        code = 500
-        body = ""
+
+        #code = 500
+        #body = ""
+
+        hostname, port, path = self.parse(url)
+
+        self.connect(hostname, port)
+
+
+        if  (args is None):
+            encoded_args = ""
+            length = 0
+
+        else:
+            encoded_args = urlencode(args)
+            length = len(encoded_args)
+
+
+
+
+        #https://stackoverflow.com/questions/14551194/how-are-parameters-sent-in-an-http-post-request
+        content_type = "application/x-www-form-urlencoded"
+
+        request = self.formRequest("POST", path, hostname)
+
+        request += "Connection: close\r\n"
+        request += "Content-type: " + content_type + "\r\n"
+        request += "Content-length: {}\r\n\r\n".format(length)
+        request += encoded_args
+
+
+        #print(request)
+
+        self.sendall(request)
+
+        recieved_data = self.recvall(self.socket)
+
+        print(recieved_data)
+
+        code = self.get_code(recieved_data)
+        body = self.get_body(recieved_data)
+
+
+        self.socket.close()
+
         return HTTPResponse(code, body)
 
     def parse(self, url):
