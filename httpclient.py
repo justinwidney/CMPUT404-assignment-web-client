@@ -227,16 +227,17 @@ class HTTPClient(object):
 
 
 
-        if ("http://" not in url and "https://" not in url):
-            url = "http://" + url
-
-
+ 
 
         parsed_url = urlparse(url)
+
+	
 
         hostname = parsed_url.hostname
         port = parsed_url.port
         path = parsed_url.path
+
+        
 
         # add trailing for paths not including .something
         if path == "":
