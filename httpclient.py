@@ -66,7 +66,7 @@ class HTTPClient(object):
 
         return request
 
-        #self.request.sendall(str.encode(response))
+
 
 
     def connect(self, host, port):
@@ -99,14 +99,12 @@ class HTTPClient(object):
 
         code = (int)((data.split(" "))[1])
 
-        #print(code)
 
         return code
 
     def get_headers(self,data):
 
         headers = data.split("\r\n\r\n")[0]
-
 
         return headers
 
@@ -142,7 +140,7 @@ class HTTPClient(object):
         #body = ""
 
 
-        # need http
+  
 
         hostname, port, path = self.parse(url)
 
@@ -155,7 +153,7 @@ class HTTPClient(object):
         request += "Connection: close\r\n\r\n"
 
 
-        #self.socket.send(request.encode('utf-8'))
+    
 
         self.sendall(request)
 
@@ -164,7 +162,7 @@ class HTTPClient(object):
         recieved_data = self.recvall(self.socket)
         self.socket.close()
 
-        #recieved_data = recieved_data.decode(utf-8)
+      
 
 
         print(recieved_data)
@@ -172,7 +170,7 @@ class HTTPClient(object):
         code = self.get_code(recieved_data)
         body = self.get_body(recieved_data)
 
-        #headers = self.get_headers(recieved_data)
+   
 
 
         return HTTPResponse(code, body)
